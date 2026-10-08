@@ -1,6 +1,6 @@
 // Eva's Budget service worker: makes the app installable and lets it open offline.
 // Bump VERSION whenever the app files change so phones pick up the new version.
-const VERSION = "eb-v4";
+const VERSION = "eb-v5";
 const SHELL = [
   "./",
   "./index.html",

@@ -173,10 +173,13 @@ input[type="text"], input[type="number"], input[type="date"], input:not([type]),
   width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 12px; font-size: 1rem;
 }
 input[type="text"], input[type="number"], input[type="date"], input:not([type]), select { height: 2.9rem; line-height: normal; }
-/* iPhone draws date boxes wider and taller than other inputs; make them match */
-input[type="date"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 0; max-width: 100%; text-align: left; }
-input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
-input[type="date"]::-webkit-calendar-picker-indicator { opacity: .6; }
+/* Date boxes: the app draws the box itself (iPhone's own date box is a different size);
+   the real date input sits invisibly on top so tapping still opens the phone's date picker. */
+.datebox { position: relative; height: 2.9rem; width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; font-size: 1rem; overflow: hidden; }
+.datebox-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.datebox-icon { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.datebox:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--soft); }
+.datebox input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; -webkit-appearance: none; appearance: none; cursor: pointer; font-size: 16px; }
 /* keep scrolled content from showing behind the phone's clock and battery */
 body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 30; pointer-events: none; }
 input:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--soft); }
@@ -376,7 +379,7 @@ table.hist .r { text-align: right; }
       <div class="row">
         <div class="field">
           <label for="f-date">Date</label>
-          <input type="date" id="f-date">
+          <div class="datebox"><span class="datebox-text" id="f-date-text"></span><svg class="datebox-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg><input type="date" id="f-date"></div>
         </div>
         <div class="field" style="flex-grow:2">
           <label for="f-note">Note</label>
@@ -499,7 +502,7 @@ table.hist .r { text-align: right; }
           <div class="field"><label for="r-freq">How often</label>
             <select id="r-freq"><option value="monthly">Every month</option><option value="biweekly">Every 2 weeks</option><option value="weekly">Every week</option></select>
           </div>
-          <div class="field"><label for="r-start">First payment date</label><input type="date" id="r-start"></div>
+          <div class="field"><label for="r-start">First payment date</label><div class="datebox"><span class="datebox-text" id="r-start-text"></span><svg class="datebox-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg><input type="date" id="r-start"></div></div>
         </div>
         <p class="hint" id="r-hint"></p>
         <p class="err" id="r-err" hidden></p>
@@ -562,6 +565,7 @@ table.hist .r { text-align: right; }
       <h3>Account</h3>
       <p class="muted" style="font-size:.88rem" id="acct-email">Signed in</p>
       <div class="actions"><button type="button" class="btn" id="acct-signout">Sign out</button></div>
+      <p class="hint">App version 5</p>
     </div>
   </section>
 
@@ -977,7 +981,7 @@ table.hist .r { text-align: right; }
   function recById(id) { return S.recurring.filter(function (r) { return r.id === id; })[0]; }
   function resetRecForm() {
     UI.rEditing = null;
-    $("#r-name").value = ""; $("#r-amount").value = ""; $("#r-freq").value = "monthly"; $("#r-start").value = todayStr();
+    $("#r-name").value = ""; $("#r-amount").value = ""; $("#r-freq").value = "monthly"; $("#r-start").value = todayStr(); syncDates();
     UI.rCur = "HKD"; setSeg("r-cur", "cur", "HKD");
     $("#r-form-title").textContent = "Add regular income";
     $("#r-submit").textContent = "Add regular income";
@@ -986,7 +990,7 @@ table.hist .r { text-align: right; }
   }
   function startRecEdit(r) {
     UI.rEditing = r.id;
-    $("#r-name").value = r.name || ""; $("#r-amount").value = r.amount; $("#r-freq").value = r.freq || "monthly"; $("#r-start").value = r.start;
+    $("#r-name").value = r.name || ""; $("#r-amount").value = r.amount; $("#r-freq").value = r.freq || "monthly"; $("#r-start").value = r.start; syncDates();
     UI.rCur = r.currency === "CNY" ? "CNY" : "HKD"; setSeg("r-cur", "cur", UI.rCur);
     $("#r-form-title").textContent = "Edit " + (r.name || "regular income");
     $("#r-submit").textContent = "Save changes";
@@ -1104,6 +1108,13 @@ table.hist .r { text-align: right; }
   $("#f-amount").addEventListener("input", updateConv);
   $("#f-date").value = todayStr();
 
+  function syncDates() {
+    ["f-date", "r-start"].forEach(function (id) {
+      var v = $("#" + id).value, t = $("#" + id + "-text");
+      t.textContent = /^\d{4}-\d{2}-\d{2}$/.test(v) ? parseD(v).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Pick a date";
+    });
+  }
+  ["f-date", "r-start"].forEach(function (id) { ["input", "change", "blur"].forEach(function (ev) { $("#" + id).addEventListener(ev, syncDates); }); });
   function showErr(id, msg) { var el = $(id); el.textContent = msg || ""; el.hidden = !msg; }
   function resetForm() {
     UI.editing = null;
@@ -1122,7 +1133,7 @@ table.hist .r { text-align: right; }
     setCur(e.currency === "CNY" ? "CNY" : "HKD");
     $("#f-amount").value = e.amount;
     if (e.category && catById(e.category)) $("#f-cat").value = e.category;
-    $("#f-date").value = e.date || todayStr();
+    $("#f-date").value = e.date || todayStr(); syncDates();
     $("#f-note").value = e.note || "";
     $("#f-title").textContent = "Edit entry";
     $("#f-submit").textContent = "Save changes";
@@ -1335,6 +1346,7 @@ table.hist .r { text-align: right; }
   $("#today-label").textContent = monthLabel(thisMonth()) + " · HKD & RMB";
   setType("spend");
   $("#r-start").value = todayStr();
+  syncDates();
   // daily limits reset at 00:00: refresh the numbers when the clock passes midnight
   (function atMidnight() {
     var n = new Date(), next = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 5);
