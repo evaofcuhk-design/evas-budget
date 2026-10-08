@@ -242,6 +242,14 @@ table.hist .r { text-align: right; }
   .set-cat { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 76px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
   .set-cat .c-name { grid-column: 1 / -1; font-weight: 600; }
 }
+.est-rows { display: flex; flex-direction: column; }
+.est-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: .92rem; align-items: baseline; }
+.est-row .n { min-width: 0; overflow-wrap: anywhere; }
+.est-row .d { color: var(--muted); font-size: .8rem; }
+.est-row .v { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.est-total { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding-top: 10px; border-top: 2px solid var(--ink); font-weight: 600; }
+.est-total b { font-size: 1.35rem; font-variant-numeric: tabular-nums; color: var(--good); white-space: nowrap; }
+.est-total b.neg { color: var(--bad); }
 .recs { display: flex; flex-direction: column; gap: 10px; }
 .rec { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
 .rec.paused { opacity: .7; }
@@ -516,6 +524,18 @@ table.hist .r { text-align: right; }
         <div class="field" style="flex:0 1 130px"><label for="c-new-period" class="lbl" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Resets</label><select id="c-new-period"><option value="day">Daily</option><option value="week">Weekly</option><option value="month" selected>Monthly</option></select></div>
         <button type="submit" class="btn primary">Add</button>
       </form>
+    </div>
+    <div class="block card" id="est-card">
+      <h3>Monthly savings estimate</h3>
+      <p class="muted" style="font-size:.88rem">What’s left in a regular month if you spend up to every limit. Daily and weekly limits are turned into an average month (30.4 days).</p>
+      <div class="field">
+        <label for="est-income">Monthly allowance (HKD)</label>
+        <div class="limit-in"><input type="number" id="est-income" inputmode="decimal" step="1" min="0" placeholder="0"></div>
+      </div>
+      <p class="hint" id="est-income-note"></p>
+      <div class="est-rows" id="est-rows"></div>
+      <div class="est-total"><span>Estimated savings per month</span><b id="est-total" class="num">—</b></div>
+      <p class="hint" id="est-note"></p>
     </div>
     <div class="block card">
       <h3>Backup</h3>
@@ -987,6 +1007,53 @@ table.hist .r { text-align: right; }
     } catch (e) { toast(saveErr(e)); }
   }
 
+  // ---------- monthly savings estimate ----------
+  var AVG_DAYS = 365 / 12;
+  var estOverride = null; // a typed "what if" allowance; not saved
+  function recMonthly(r) { var a = hkd(r.amount, r.currency); return r.freq === "weekly" ? a * 52 / 12 : r.freq === "biweekly" ? a * 26 / 12 : a; }
+  function catMonthly(c) {
+    var lim = Number(c.limit); if (!(lim > 0)) return 0;
+    var p = catPeriod(c);
+    return p === "day" ? lim * AVG_DAYS : p === "week" ? lim * AVG_DAYS / 7 : lim;
+  }
+  function renderEstimate() {
+    if (!S.loaded.cats || !S.loaded.recurring || !S.loaded.settings) return;
+    var active = S.recurring.filter(function (r) { return !r.paused && Number(r.amount) > 0; });
+    var auto = round2(active.reduce(function (a, r) { return a + recMonthly(r); }, 0));
+    var inc = estOverride != null ? estOverride : auto;
+    var inp = $("#est-income");
+    if (document.activeElement !== inp && estOverride == null) inp.value = auto ? auto : "";
+    var note = $("#est-income-note");
+    if (estOverride != null) {
+      note.innerHTML = 'Your own figure for trying things out (not saved). <button type="button" class="link" data-act="est-reset">Use my regular income</button>';
+    } else if (active.length) {
+      note.textContent = "From your regular income: " + active.map(function (r) {
+        var per = r.freq === "weekly" ? " a week" : r.freq === "biweekly" ? " every 2 weeks" : " a month";
+        return (r.name || "Income") + " " + money(r.amount, r.currency) + per;
+      }).join(", ") + ".";
+    } else {
+      note.textContent = "No regular income set up yet. Type an amount to try it out, or add your allowance under Regular income above.";
+    }
+    var capped = S.cats.filter(function (c) { return Number(c.limit) > 0; });
+    var open = S.cats.filter(function (c) { return !(Number(c.limit) > 0); });
+    var total = 0;
+    $("#est-rows").innerHTML = capped.map(function (c) {
+      var m = catMonthly(c), p = catPeriod(c); total += m;
+      var d = p === "day" ? money(c.limit) + " a day" : p === "week" ? money(c.limit) + " a week" : "";
+      return '<div class="est-row"><span class="n">' + esc(c.name) + (d ? ' <span class="d">· ' + esc(d) + '</span>' : '') + '</span><span class="v">−' + money(m) + '</span></div>';
+    }).join("") || '<p class="muted" style="font-size:.88rem">No category limits set yet. Add them in Categories &amp; limits above.</p>';
+    var save = round2(inc - total), out = $("#est-total");
+    out.textContent = money(save); out.classList.toggle("neg", save < 0);
+    var msg = save >= 0 ? "That’s about " + money(save * 12) + " a year." : "Your limits add up to " + money(-save) + " more than your allowance each month.";
+    if (open.length) msg += " Not counted, because they have no limit: " + open.map(function (c) { return c.name; }).join(", ") + ".";
+    $("#est-note").textContent = msg;
+  }
+  $("#est-income").addEventListener("input", function () {
+    var v = this.value.trim(), n = parseAmt(v);
+    estOverride = v === "" || !isFinite(n) ? null : n;
+    renderEstimate();
+  });
+
   function renderCatSelect() {
     var sel = $("#f-cat"), cur = sel.value;
     sel.innerHTML = S.cats.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join("");
@@ -995,7 +1062,7 @@ table.hist .r { text-align: right; }
 
   function renderAll() {
     renderCatSelect();
-    renderOverview(); renderBudget(); renderGoals(); renderSettings(); renderRecurring(); updateConv();
+    renderOverview(); renderBudget(); renderGoals(); renderSettings(); renderRecurring(); renderEstimate(); updateConv();
   }
 
   // ---------- tabs ----------
@@ -1247,6 +1314,7 @@ table.hist .r { text-align: right; }
     var act = t.dataset.act;
     if (act && act.indexOf("g-") === 0) return goalAction(act, t.closest(".goal"), t);
     if (act && act.indexOf("r-") === 0) return recAction(act, t.closest(".rec"), t);
+    if (act === "est-reset") { estOverride = null; $("#est-income").value = ""; renderEstimate(); return; }
     if (act === "c-del") {
       if (!armed(t, "Sure?")) return;
       var id = t.closest(".set-cat").dataset.id;
@@ -1396,7 +1464,7 @@ table.hist .r { text-align: right; }
       if (first) setTimeout(runRecurring, 0);
     }, onErr);
     db.collection("goals").onSnapshot(function (q) { S.goals = docs(q); S.loaded.goals = true; renderAll(); }, onErr);
-    db.collection("recurring").onSnapshot(function (q) { S.recurring = docs(q); S.loaded.recurring = true; renderRecurring(); setTimeout(runRecurring, 0); }, onErr);
+    db.collection("recurring").onSnapshot(function (q) { S.recurring = docs(q); S.loaded.recurring = true; renderRecurring(); renderEstimate(); setTimeout(runRecurring, 0); }, onErr);
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { runRecurring(); maybeAutoRate(); renderAll(); } });
   }
   window.EvaBudget = {
