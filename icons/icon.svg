@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#FCDCE6"/>
+  <circle cx="256" cy="268" r="196" fill="#FFF1F5"/>
+  <!-- body -->
+  <path d="M150 470 C150 380 190 330 256 330 C322 330 362 380 362 470 Z" fill="#FFFFFF" stroke="#3A2930" stroke-width="10" stroke-linejoin="round"/>
+  <!-- head with ears -->
+  <path d="M120 230 C120 170 128 128 138 86 L200 140 C236 130 276 130 312 140 L374 86 C384 128 392 170 392 230 C392 300 334 348 256 348 C178 348 120 300 120 230 Z"
+        fill="#FFFFFF" stroke="#3A2930" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M148 112 L156 156 L186 138 Z M364 112 L356 156 L326 138 Z" fill="#F6A9C0"/>
+  <!-- cheeks -->
+  <circle cx="168" cy="262" r="20" fill="#F6B3C8"/>
+  <circle cx="344" cy="262" r="20" fill="#F6B3C8"/>
+  <!-- happy closed eyes -->
+  <g fill="none" stroke="#3A2930" stroke-width="10" stroke-linecap="round">
+    <path d="M180 220 Q200 196 220 220"/>
+    <path d="M292 220 Q312 196 332 220"/>
+    <!-- mouth -->
+    <path d="M256 262 Q246 284 228 276"/>
+    <path d="M256 262 Q266 284 284 276"/>
+  </g>
+  <path d="M244 248 H268 L256 262 Z" fill="#C93F6B"/>
+  <!-- whiskers -->
+  <g stroke="#3A2930" stroke-width="6" stroke-linecap="round">
+    <path d="M84 238 L140 246"/><path d="M86 270 L140 266"/>
+    <path d="M428 238 L372 246"/><path d="M426 270 L372 266"/>
+  </g>
+  <!-- flower stem held in paws -->
+  <path d="M256 440 C256 410 262 390 284 360" fill="none" stroke="#6BAF7F" stroke-width="10" stroke-linecap="round"/>
+  <path d="M262 405 C282 396 296 402 302 414 C284 420 270 416 262 405 Z" fill="#7FC08F"/>
+  <!-- flower -->
+  <g transform="translate(296 340)">
+    <g fill="#F28AAA">
+      <ellipse cx="0" cy="-30" rx="18" ry="26"/>
+      <ellipse cx="0" cy="-30" rx="18" ry="26" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-30" rx="18" ry="26" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-30" rx="18" ry="26" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-30" rx="18" ry="26" transform="rotate(288)"/>
+    </g>
+    <circle r="15" fill="#F2C661"/>
+  </g>
+  <!-- paws wrapped around the stem -->
+  <g fill="#FFFFFF" stroke="#3A2930" stroke-width="9">
+    <ellipse cx="232" cy="430" rx="30" ry="24"/>
+    <ellipse cx="282" cy="434" rx="30" ry="24"/>
+  </g>
+  <g stroke="#3A2930" stroke-width="5" stroke-linecap="round">
+    <path d="M222 420 v10"/><path d="M236 418 v10"/>
+    <path d="M276 424 v10"/><path d="M290 422 v10"/>
+  </g>
+</svg>
