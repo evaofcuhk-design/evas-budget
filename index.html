@@ -172,6 +172,13 @@ section.page { display: flex; flex-direction: column; gap: 22px; }
 input[type="text"], input[type="number"], input[type="date"], input:not([type]), select {
   width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 12px; font-size: 1rem;
 }
+input[type="text"], input[type="number"], input[type="date"], input:not([type]), select { height: 2.9rem; line-height: normal; }
+/* iPhone draws date boxes wider and taller than other inputs; make them match */
+input[type="date"] { -webkit-appearance: none; appearance: none; display: block; max-width: 100%; text-align: left; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input[type="date"]::-webkit-calendar-picker-indicator { opacity: .6; }
+/* keep scrolled content from showing behind the phone's clock and battery */
+body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 30; pointer-events: none; }
 input:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--soft); }
 .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
 .row > .field { flex: 1 1 140px; }
