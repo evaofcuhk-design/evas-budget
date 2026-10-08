@@ -174,7 +174,7 @@ input[type="text"], input[type="number"], input[type="date"], input:not([type]),
 }
 input[type="text"], input[type="number"], input[type="date"], input:not([type]), select { height: 2.9rem; line-height: normal; }
 /* iPhone draws date boxes wider and taller than other inputs; make them match */
-input[type="date"] { -webkit-appearance: none; appearance: none; display: block; max-width: 100%; text-align: left; }
+input[type="date"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 0; max-width: 100%; text-align: left; }
 input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
 input[type="date"]::-webkit-calendar-picker-indicator { opacity: .6; }
 /* keep scrolled content from showing behind the phone's clock and battery */
@@ -1492,7 +1492,19 @@ table.hist .r { text-align: right; }
     writeError: function (e) { toast(saveErr(e)); }
   };
   $("#gate-signin").addEventListener("click", function () { $("#gate-err").hidden = true; window.EBAuth && window.EBAuth.signIn(); });
-  if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }
+  if ("serviceWorker" in navigator) {
+    // When a new version of the app has been published, switch to it straight away (one quick reload).
+    var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) { reg.update(); }).catch(function () {});
+    });
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") navigator.serviceWorker.getRegistration().then(function (r) { if (r) r.update(); });
+    });
+  }
 })();
 </script>
 <script type="module">

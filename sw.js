@@ -1,6 +1,6 @@
 // Eva's Budget service worker: makes the app installable and lets it open offline.
 // Bump VERSION whenever the app files change so phones pick up the new version.
-const VERSION = "eb-v3";
+const VERSION = "eb-v4";
 const SHELL = [
   "./",
   "./index.html",
@@ -30,7 +30,7 @@ self.addEventListener("fetch", (event) => {
   // The app page itself: try the network first so updates arrive, fall back to the saved copy offline.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-store" }) // skip the browser's own 10-minute cache so updates show at once
         .then((res) => { const copy = res.clone(); caches.open(VERSION).then((c) => c.put("./index.html", copy)); return res; })
         .catch(() => caches.match("./index.html"))
     );
